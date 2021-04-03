@@ -1,3 +1,6 @@
+//declaring everything as model means that we would use model.state and model.loadRecipe to access
+import * as model from './model.js';
+
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 //this allows you to import a specific set of images and use them so when the build is created and the files are put into the dist folder, uyou can still access them.
@@ -39,25 +42,12 @@ const showRecipe = async function () {
   try {
     const id = window.location.hash.slice(1);
     if (!id) return;
-    //loading recipe
     renderSpinner(recipeContainer);
-    const res = await fetch(
-      `https://forkify-api.herokuapp.com/api/v2/recipes/${id}`
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(`${data.message} (${res.status})`);
-    let { recipe } = data.data;
-    recipe = {
-      id: recipe.id,
-      title: recipe.title,
-      publisher: recipe.publisher,
-      sourceUrl: recipe.source_url,
-      image: recipe.image_url,
-      servings: recipe.servings,
-      cookingTime: recipe.cooking_time,
-      ingredients: recipe.ingredients,
-    };
-    console.log(recipe);
+    //loading recipe
+    //need to await return as it's calling an async function and a promise is bieng returned
+    await model.loadRecipe(id);
+    const { recipe } = model.state;
+
     //rendering recipe
     const markup = ` 
     <figure class="recipe__fig">
