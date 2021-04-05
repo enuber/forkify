@@ -479,7 +479,7 @@ const controlSearchResults = async () => {
     // load search results
     await _modelJs.loadSearchResults(query);
     // render results
-    _viewsResultsViewJsDefault.default.render(_modelJs.state.search.results);
+    _viewsResultsViewJsDefault.default.render(_modelJs.getSearchResultsPage(1));
   } catch (err) {
     console.log(err);
   }
@@ -12401,13 +12401,18 @@ _parcelHelpers.export(exports, "loadRecipe", function () {
 _parcelHelpers.export(exports, "loadSearchResults", function () {
   return loadSearchResults;
 });
+_parcelHelpers.export(exports, "getSearchResultsPage", function () {
+  return getSearchResultsPage;
+});
 var _configJs = require('./config.js');
 var _helpersJs = require('./helpers.js');
 const state = {
   recipe: {},
   search: {
     query: '',
-    results: []
+    results: [],
+    page: 1,
+    resultsPerpage: _configJs.RES_PER_PAGE
   }
 };
 const loadRecipe = async id => {
@@ -12445,6 +12450,12 @@ const loadSearchResults = async query => {
     throw err;
   }
 };
+const getSearchResultsPage = (page = state.search.page) => {
+  state.search.page = page;
+  const start = (page - 1) * state.search.resultsPerpage;
+  const end = page * state.search.resultsPerpage;
+  return state.search.results.slice(start, end);
+};
 
 },{"@parcel/transformer-js/lib/esmodule-helpers.js":"5gA8y","./config.js":"6pr2F","./helpers.js":"581KF"}],"6pr2F":[function(require,module,exports) {
 var _parcelHelpers = require("@parcel/transformer-js/lib/esmodule-helpers.js");
@@ -12455,8 +12466,12 @@ _parcelHelpers.export(exports, "API_URL", function () {
 _parcelHelpers.export(exports, "TIMEOUT_SEC", function () {
   return TIMEOUT_SEC;
 });
+_parcelHelpers.export(exports, "RES_PER_PAGE", function () {
+  return RES_PER_PAGE;
+});
 const API_URL = 'https://forkify-api.herokuapp.com/api/v2/recipes/';
 const TIMEOUT_SEC = 10;
+const RES_PER_PAGE = 10;
 
 },{"@parcel/transformer-js/lib/esmodule-helpers.js":"5gA8y"}],"581KF":[function(require,module,exports) {
 var _parcelHelpers = require("@parcel/transformer-js/lib/esmodule-helpers.js");
