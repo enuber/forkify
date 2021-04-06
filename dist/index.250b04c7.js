@@ -494,8 +494,16 @@ const controlPagination = goToPage => {
   // render new pagination buttons
   _viewsPaginationViewJsDefault.default.render(_modelJs.state.search);
 };
+const controlServings = newServings => {
+  // update recipe servings (in state)
+  _modelJs.updateServings(newServings);
+  // update the recipe view
+  // recipeView.render(model.state.recipe);
+  _viewsRecipeViewJsDefault.default.update(_modelJs.state.recipe);
+};
 const init = () => {
   _viewsRecipeViewJsDefault.default.addHandlerRender(controlRecipes);
+  _viewsRecipeViewJsDefault.default.addHandlerUpdateServings(controlServings);
   _viewsSearchViewJsDefault.default.addHandlerSearch(controlSearchResults);
   _viewsPaginationViewJsDefault.default.addHandlerClick(controlPagination);
 };
@@ -12415,6 +12423,9 @@ _parcelHelpers.export(exports, "loadSearchResults", function () {
 _parcelHelpers.export(exports, "getSearchResultsPage", function () {
   return getSearchResultsPage;
 });
+_parcelHelpers.export(exports, "updateServings", function () {
+  return updateServings;
+});
 var _configJs = require('./config.js');
 var _helpersJs = require('./helpers.js');
 const state = {
@@ -12466,6 +12477,12 @@ const getSearchResultsPage = (page = state.search.page) => {
   const start = (page - 1) * state.search.resultsPerPage;
   const end = page * state.search.resultsPerPage;
   return state.search.results.slice(start, end);
+};
+const updateServings = newServings => {
+  state.recipe.ingredients.forEach(ing => {
+    ing.quantity = ing.quantity * newServings / state.recipe.servings;
+  });
+  state.recipe.servings = newServings;
 };
 
 },{"@parcel/transformer-js/lib/esmodule-helpers.js":"5gA8y","./config.js":"6pr2F","./helpers.js":"581KF"}],"6pr2F":[function(require,module,exports) {
@@ -12540,6 +12557,15 @@ class RecipeView extends _ViewJsDefault.default {
     _defineProperty(this, "addHandlerRender", handler => {
       ['hashchange', 'load'].forEach(evt => window.addEventListener(evt, handler));
     });
+    _defineProperty(this, "addHandlerUpdateServings", handler => {
+      this._parentElement.addEventListener('click', evt => {
+        const btn = evt.target.closest('.btn--update-servings');
+        if (!btn) return;
+        console.log(btn);
+        const {updateTo} = btn.dataset;
+        if (+updateTo > 0) handler(+updateTo);
+      });
+    });
     _defineProperty(this, "_generateMarkupIngredient", ingredient => {
       return `
         <li class="recipe__ingredient">
@@ -12580,12 +12606,12 @@ class RecipeView extends _ViewJsDefault.default {
         <span class="recipe__info-text">servings</span>
 
         <div class="recipe__info-buttons">
-          <button class="btn--tiny btn--increase-servings">
+          <button class="btn--tiny btn--update-servings" data-update-to="${this._data.servings - 1}">
             <svg>
               <use href="${_urlImgIconsSvgDefault.default}#icon-minus-circle"></use>
             </svg>
           </button>
-          <button class="btn--tiny btn--increase-servings">
+          <button class="btn--tiny btn--update-servings" data-update-to="${this._data.servings + 1}">
             <svg>
               <use href="${_urlImgIconsSvgDefault.default}#icon-plus-circle"></use>
             </svg>
@@ -13115,6 +13141,11 @@ class View {
     const markup = this._generateMarkup();
     this._clear();
     this._parentElement.insertAdjacentHTML('afterbegin', markup);
+  }
+  update(data) {
+    if (!data || Array.isArray(data) && data.length === 0) return this.renderError();
+    this._data = data;
+    const markup = this._generateMarkup();
   }
   _clear() {
     this._parentElement.innerHTML = '';
