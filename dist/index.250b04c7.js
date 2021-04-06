@@ -463,6 +463,8 @@ const controlRecipes = async () => {
     const id = window.location.hash.slice(1);
     if (!id) return;
     _viewsRecipeViewJsDefault.default.renderSpinner();
+    // update results view to mark selected search result
+    _viewsResultsViewJsDefault.default.update(_modelJs.getSearchResultsPage());
     // loading recipe
     // need to await return as it's calling an async function and a promise is bieng returned
     await _modelJs.loadRecipe(id);
@@ -13143,9 +13145,22 @@ class View {
     this._parentElement.insertAdjacentHTML('afterbegin', markup);
   }
   update(data) {
-    if (!data || Array.isArray(data) && data.length === 0) return this.renderError();
     this._data = data;
-    const markup = this._generateMarkup();
+    const newMarkup = this._generateMarkup();
+    const newDOM = document.createRange().createContextualFragment(newMarkup);
+    const newElements = Array.from(newDOM.querySelectorAll('*'));
+    const curElements = Array.from(this._parentElement.querySelectorAll('*'));
+    newElements.forEach((newElem, i) => {
+      const curElem = curElements[i];
+      // updates changed Text
+      if (!newElem.isEqualNode(curElem) && newElem.firstChild?.nodeValue?.trim?.() !== '') {
+        curElem.textContent = newElem.textContent;
+      }
+      // updates changed attributes
+      if (!newElem.isEqualNode(curElem)) {
+        Array.from(newElem.attributes).forEach(attr => curElem.setAttribute(attr.name, attr.value));
+      }
+    });
   }
   _clear() {
     this._parentElement.innerHTML = '';
@@ -13219,9 +13234,10 @@ class ResultsView extends _ViewJsDefault.default {
       return this._data.map(this._generateMarkupPreview).join('');
     });
     _defineProperty(this, "_generateMarkupPreview", result => {
+      const id = window.location.hash.slice(1);
       return `
     <li class="preview">
-          <a class="preview__link" href="#${result.id}">
+          <a class="preview__link ${result.id === id ? 'preview__link--active' : ''}" href="#${result.id}">
             <figure class="preview__fig">
               <img src="${result.image}" alt="${result.title}" />
             </figure>

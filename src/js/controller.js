@@ -18,6 +18,8 @@ const controlRecipes = async () => {
     const id = window.location.hash.slice(1);
     if (!id) return;
     recipeView.renderSpinner();
+    //update results view to mark selected search result
+    resultsView.update(model.getSearchResultsPage());
     //loading recipe
     //need to await return as it's calling an async function and a promise is bieng returned
     await model.loadRecipe(id);
