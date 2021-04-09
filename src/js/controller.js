@@ -1,9 +1,12 @@
 //declaring everything as model means that we would use model.state and model.loadRecipe to access
 import * as model from './model.js';
+import { MODAL_CLOSE_SEC } from './config.js';
 import recipeView from './views/recipeView.js';
 import searchView from './views/searchView.js';
 import resultsView from './views/resultsView.js';
+import bookmarksView from './views/bookmarksView.js';
 import paginationView from './views/paginationView.js';
+import addRecipeView from './views/addRecipeView.js';
 
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
@@ -20,6 +23,9 @@ const controlRecipes = async () => {
     recipeView.renderSpinner();
     //update results view to mark selected search result
     resultsView.update(model.getSearchResultsPage());
+    //updating bookmarks view
+    bookmarksView.update(model.state.bookmarks);
+
     //loading recipe
     //need to await return as it's calling an async function and a promise is bieng returned
     await model.loadRecipe(id);
@@ -63,10 +69,49 @@ const controlServings = newServings => {
   recipeView.update(model.state.recipe);
 };
 
+const controlAddBookmark = () => {
+  //add or remove a bookmark
+  if (!model.state.recipe.bookmarked) {
+    model.addBookmark(model.state.recipe);
+  } else if (model.state.recipe.bookmarked) {
+    model.deleteBookmark(model.state.recipe.id);
+  }
+  //update recipe view
+  recipeView.update(model.state.recipe);
+  //render bookmarks
+  bookmarksView.render(model.state.bookmarks);
+};
+
+const controlBookmarks = () => {
+  bookmarksView.render(model.state.bookmarks);
+};
+
+const controlAddRecipe = async newRecipe => {
+  try {
+    //show loading spinner
+    addRecipeView.renderSpinner();
+    //upload new recipe
+    await model.uploadRecipe(newRecipe);
+    //render recipe
+    recipeView.render(model.state.recipe);
+    //success message
+    addRecipeView.renderMessage();
+    //close form window
+    setTimeout(() => {
+      addRecipeView.toggleWindow();
+    }, MODAL_CLOSE_SEC * 1000);
+  } catch (err) {
+    addRecipeView.renderError(err.message);
+  }
+};
+
 const init = () => {
+  bookmarksView.addHandlerRender(controlBookmarks);
   recipeView.addHandlerRender(controlRecipes);
   recipeView.addHandlerUpdateServings(controlServings);
+  recipeView.addHanlderAddBookmark(controlAddBookmark);
   searchView.addHandlerSearch(controlSearchResults);
   paginationView.addHandlerClick(controlPagination);
+  addRecipeView.addHandlerUpload(controlAddRecipe);
 };
 init();
