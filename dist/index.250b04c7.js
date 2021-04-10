@@ -535,6 +535,11 @@ const controlAddRecipe = async newRecipe => {
     _viewsRecipeViewJsDefault.default.render(_modelJs.state.recipe);
     // success message
     _viewsAddRecipeViewJsDefault.default.renderMessage();
+    // render bookmark view
+    _viewsBookmarksViewJsDefault.default.render(_modelJs.state.bookmarks);
+    // change id in url
+    // takes in three arguments, the first is state, the second title and third the url
+    window.history.pushState(null, '', `#${_modelJs.state.recipe.id}`);
     // close form window
     setTimeout(() => {
       _viewsAddRecipeViewJsDefault.default.toggleWindow();
@@ -12511,7 +12516,7 @@ const createRecipeObject = data => {
 };
 const loadRecipe = async id => {
   try {
-    const data = await _helpersJs.getJSON(`${_configJs.API_URL}${id}`);
+    const data = await _helpersJs.AJAX(`${_configJs.API_URL}${id}?key=${_configJs.KEY}`);
     state.recipe = createRecipeObject(data);
     if (state.bookmarks.some(bookmark => bookmark.id === id)) state.recipe.bookmarked = true; else state.recipe.bookmarked = false;
   } catch (err) {
@@ -12521,14 +12526,17 @@ const loadRecipe = async id => {
 const loadSearchResults = async query => {
   try {
     state.search.query = query;
-    const data = await _helpersJs.getJSON(`${_configJs.API_URL}?search=${query}`);
+    const data = await _helpersJs.AJAX(`${_configJs.API_URL}?search=${query}&key=${_configJs.KEY}`);
     const {recipes} = data.data;
     state.search.results = recipes.map(recipe => {
       return {
         id: recipe.id,
         title: recipe.title,
         publisher: recipe.publisher,
-        image: recipe.image_url
+        image: recipe.image_url,
+        ...recipe.key && ({
+          key: recipe.key
+        })
       };
     });
     state.search.page = 1;
@@ -12578,7 +12586,8 @@ const clearBookmarks = () => {
 const uploadRecipe = async newRecipe => {
   try {
     const ingredients = Object.entries(newRecipe).filter(entry => entry[0].startsWith('ingredient') && entry[1] !== '').map(ingredient => {
-      const ingArr = ingredient[1].replaceAll(' ', '').split(',');
+      const ingArr = ingredient[1].split(',').map(elem => elem.trim());
+      // const ingArr = ingredient[1].replaceAll(' ', '').split(',');
       if (ingArr.length !== 3) throw new Error('Wrong ingredient format. Please use the correct format');
       const [quantity, unit, description] = ingArr;
       return {
@@ -12596,7 +12605,7 @@ const uploadRecipe = async newRecipe => {
       servings: +newRecipe.servings,
       ingredients
     };
-    const data = await _helpersJs.sendJSON(`${_configJs.API_URL}?key=${_configJs.KEY}`, recipe);
+    const data = await _helpersJs.AJAX(`${_configJs.API_URL}?key=${_configJs.KEY}`, recipe);
     state.recipe = createRecipeObject(data);
     addBookmark(state.recipe);
   } catch (err) {
@@ -12631,11 +12640,8 @@ const MODAL_CLOSE_SEC = 2.5;
 },{"@parcel/transformer-js/lib/esmodule-helpers.js":"5gA8y"}],"581KF":[function(require,module,exports) {
 var _parcelHelpers = require("@parcel/transformer-js/lib/esmodule-helpers.js");
 _parcelHelpers.defineInteropFlag(exports);
-_parcelHelpers.export(exports, "getJSON", function () {
-  return getJSON;
-});
-_parcelHelpers.export(exports, "sendJSON", function () {
-  return sendJSON;
+_parcelHelpers.export(exports, "AJAX", function () {
+  return AJAX;
 });
 var _configJs = require('./config.js');
 const timeout = function (s) {
@@ -12645,27 +12651,15 @@ const timeout = function (s) {
     }, s * 1000);
   });
 };
-const getJSON = async url => {
+const AJAX = async (url, uploadData = undefined) => {
   try {
-    const fetchPro = fetch(url);
-    const res = await Promise.race([fetchPro, timeout(_configJs.TIMEOUT_SEC)]);
-    const data = await res.json();
-    if (!res.ok) throw new Error(`${data.message} (${res.status})`);
-    return data;
-  } catch (err) {
-    // propogating down the error so that whatever calls this function gets the erorr and handles it rather than handling the error here
-    throw err;
-  }
-};
-const sendJSON = async (url, uploadData) => {
-  try {
-    const fetchPro = fetch(url, {
+    const fetchPro = uploadData ? fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(uploadData)
-    });
+    }) : fetch(url);
     const res = await Promise.race([fetchPro, timeout(_configJs.TIMEOUT_SEC)]);
     const data = await res.json();
     if (!res.ok) throw new Error(`${data.message} (${res.status})`);
@@ -12774,7 +12768,10 @@ class RecipeView extends _ViewJsDefault.default {
         </div>
       </div>
 
-      <div class="recipe__user-generated">
+      <div class="recipe__user-generated ${this._data.key ? '' : 'hidden'}">
+        <svg>
+          <use href="${_urlImgIconsSvgDefault.default}#icon-user"></use>
+        </svg>
       </div>
       <button class="btn--round btn--bookmark">
         <svg class="">
@@ -13398,7 +13395,8 @@ var _parcelHelpers = require("@parcel/transformer-js/lib/esmodule-helpers.js");
 _parcelHelpers.defineInteropFlag(exports);
 var _ViewJs = require('./View.js');
 var _ViewJsDefault = _parcelHelpers.interopDefault(_ViewJs);
-require('url:../../img/icons.svg');
+var _urlImgIconsSvg = require('url:../../img/icons.svg');
+var _urlImgIconsSvgDefault = _parcelHelpers.interopDefault(_urlImgIconsSvg);
 function _defineProperty(obj, key, value) {
   if ((key in obj)) {
     Object.defineProperty(obj, key, {
@@ -13428,6 +13426,16 @@ class PreviewView extends _ViewJsDefault.default {
               <h4 class="preview__title">${this._data.title}</h4>
               <p class="preview__publisher">${this._data.publisher}</p>
             </div>
+            <div class="preview__user-generated ${this._data.key ? '' : 'hidden'}">
+            <svg>
+              <use href="${_urlImgIconsSvgDefault.default}#icon-user"></use>
+            </svg>
+            <div class="recipe__user-generated ${this._data.key ? '' : 'hidden'}">
+            <svg>
+              <use href="${_urlImgIconsSvgDefault.default}#icon-user"></use>
+            </svg>
+          </div>
+      </div>
           </a>
     </li>
     `;
